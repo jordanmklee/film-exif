@@ -1,0 +1,95 @@
+<!-- Sample XML data file for testing -->
+
+<roll>
+	
+	<exp>
+		<frameNumber>0</frameNumber>
+		<aperture>1.4</aperture>
+		<shutterSpeed>1.0</shutterSpeed>
+	</exp>
+	
+	<exp>
+		<frameNumber>1</frameNumber>
+		<aperture>2</aperture>
+		<shutterSpeed>0.5</shutterSpeed>
+	</exp>
+	
+	<exp>
+		<frameNumber>2</frameNumber>
+		<aperture>2.4</aperture>
+		<shutterSpeed>0.25</shutterSpeed>
+	</exp>
+	
+	<exp>
+		<frameNumber>3</frameNumber>
+		<aperture>2.8</aperture>
+		<shutterSpeed>0.125</shutterSpeed>
+	</exp>
+	
+	<exp>
+		<frameNumber>4</frameNumber>
+		<aperture>3.3</aperture>
+		<shutterSpeed>0.067</shutterSpeed>
+	</exp>
+	
+	<exp>
+		<frameNumber>5</frameNumber>
+		<aperture>4</aperture>
+		<shutterSpeed>0.033</shutterSpeed>
+	</exp>
+	
+	<exp>
+		<frameNumber>6</frameNumber>
+		<aperture>5.6</aperture>
+		<shutterSpeed>0.017</shutterSpeed>
+	</exp>
+	
+	<exp>
+		<frameNumber>7</frameNumber>
+		<aperture>6.7</aperture>
+		<shutterSpeed>0.008</shutterSpeed>
+	</exp>
+	
+	<exp>
+		<frameNumber>8</frameNumber>
+		<aperture>8</aperture>
+		<shutterSpeed>0.004</shutterSpeed>
+	</exp>
+	
+	<exp>
+		<frameNumber>9</frameNumber>
+		<aperture>9.5</aperture>
+		<shutterSpeed>0.002</shutterSpeed>
+	</exp>
+	
+	<exp>
+		<frameNumber>10</frameNumber>
+		<aperture>11</aperture>
+		<shutterSpeed>0.001</shutterSpeed>
+	</exp>
+	
+	<exp>
+		<frameNumber>11</frameNumber>
+		<aperture>13</aperture>
+		<shutterSpeed>0.001</shutterSpeed>
+	</exp>
+	
+	<exp>
+		<frameNumber>12</frameNumber>
+		<aperture>16</aperture>
+		<shutterSpeed>0.001</shutterSpeed>
+	</exp>
+	
+	<exp>
+		<frameNumber>13</frameNumber>
+		<aperture>19</aperture>
+		<shutterSpeed>0.001</shutterSpeed>
+	</exp>
+	
+	<exp>
+		<frameNumber>14</frameNumber>
+		<aperture>22</aperture>
+		<shutterSpeed>0.001</shutterSpeed>
+	</exp>
+	
+</roll>
