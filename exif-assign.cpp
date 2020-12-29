@@ -41,6 +41,26 @@ int main(){
 		jpgExif.write((char*)buf, 2);
 	}
 	
+	
+	// Psuedocode for Exif cleanup and insertion
+	/*
+	begin
+		while(in APPn zone){
+			check APPn segment type
+			get segment length
+			skip forward length
+			if(APP1)
+				delete
+			else
+				keep
+		}
+		insert custom APP1
+		write rest of data
+	end
+	*/
+	
+	
+	
 	jpg.close();
 	jpgExif.close();
 	return 0;
