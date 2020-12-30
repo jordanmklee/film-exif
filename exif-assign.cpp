@@ -1,7 +1,6 @@
 #include<fstream>
 #include<iostream>
 #include<vector>
-#include<algorithm>
 
 // EXIF/TIFF Tags
 unsigned char exifIFDTag[2] = {0x87, 0x69};
@@ -15,6 +14,7 @@ unsigned char ifdOffset[4] = {0x00, 0x00, 0x00, 0x00};
 unsigned char app1Tag[2] = {0xFF, 0xE1};
 unsigned char exifID[6] = {0x45, 0x78, 0x69, 0x66, 0x00, 0x00};	// "Exif  "
 
+// TIFF
 unsigned char littleEndianID[2] = {0x49, 0x49};	// "II"
 unsigned char bigEndianID[2] = {0x4D, 0x4D};	// "MM"
 unsigned char tiffID[2] = {0x00, 0x2A};			// 42
@@ -36,14 +36,23 @@ class IFDField{
 		unsigned char value[4];
 	
 	public:
-		// Return char* buffer of entire field
-		unsigned char* getField(){
-			unsigned char field[12];	// Each IFD field is 12 bytes
-			copy(tagID, tagID + 2, field);
-			copy(typeID, typeID + 2, field + 2);
-			copy(count, count + 4, field + 4);
-			copy(value, value + 4, field + 8);
+		// Return field as a vector of bytes
+		vector<unsigned char> getField(){
+			vector<unsigned char> field;
 			
+			// Add field elements to vector
+			for(int i = 0; i < 2; i++)
+				field.push_back(tagID[i]);
+			
+			for(int i = 0; i < 2; i++)
+				field.push_back(typeID[i]);
+			
+			for(int i = 0; i < 4; i++)
+				field.push_back(count[i]);
+			
+			for(int i = 0; i < 4; i++)
+				field.push_back(value[i]);
+				
 			return field;
 		}
 		
@@ -64,18 +73,6 @@ class IFDField{
 		void setValue(unsigned char v[]){
 			memcpy(value, v, 4);
 		}
-		
-		// TODO remove diagnostic printout
-		void print(){
-			printBytes(tagID, 2);
-			cout << endl;
-			printBytes(typeID, 2);
-			cout << endl;
-			printBytes(count, 4);
-			cout << endl;
-			printBytes(value, 4);
-			cout << endl;
-		}
 };
 
 class ExifIFDField : public IFDField{
@@ -92,7 +89,6 @@ class ExifIFDField : public IFDField{
 		}	
 };
 
-
 class IFDFieldWithData : public IFDField{
 	private:
 		vector<unsigned char> data;
@@ -107,15 +103,15 @@ class IFDFieldWithData : public IFDField{
 		
 		// Returns the data vector
 		vector<unsigned char> getData(){
+			cout << "Data" << endl;
+			for(int i = 0; i < data.size(); i++){
+				printf("%02X", data.at(i));
+				cout << " ";
+			}
+			cout << endl << endl;
 			return data;
 		}
-		
-		/// Returns the size of data vector
-		short getDataSize(){
-			return data.size()/2;
-		}
 };
-
 
 class ApertureIFDField : public IFDFieldWithData{
 	private:
@@ -176,10 +172,8 @@ class ApertureIFDField : public IFDFieldWithData{
 			}
 			
 			// Add numerator/denominator to data field
-			setData(apertureNumerator, 8);
-			setData(apertureDenominator, 8);
-			
-			
+			setData(apertureNumerator, 4);
+			setData(apertureDenominator, 4);	
 		}
 };
 
@@ -203,7 +197,7 @@ class ShutterSpeedIFDField : public IFDFieldWithData{
 		// Shutter speed is stored in IFD data area as numerator/denominator = (XML-value) / 1000
 		void setShutterSpeedData(int shutterSpeed){
 			// Denominator is always 1000
-			unsigned char denom[4] = {0x00, 0x00, 0x03, 0x0E6};
+			unsigned char denom[4] = {0x00, 0x00, 0x03, 0x0E8};
 			memcpy(shutterSpeedDenominator, denom, 4);
 			
 			// Numerator is (s) * 1000
@@ -250,16 +244,15 @@ class ShutterSpeedIFDField : public IFDFieldWithData{
 			}
 			
 			// Add numerator/denominator to data field
-			setData(shutterSpeedNumerator, 8);
-			setData(shutterSpeedDenominator, 8);
-			
+			setData(shutterSpeedNumerator, 4);
+			setData(shutterSpeedDenominator, 4);
 		}
 };
 
 class IFD{
 	private:
-		short numFields;		// short (2 bytes) so it can be incremented
-		vector<IFDField> fields;		// TODO check if vectors can be referenced to get byte array printouts
+		short numFields;	// short (2 bytes) so it can be incremented
+		vector<IFDField> fields;
 		unsigned char offsetNextIFD[4];
 		vector<unsigned char> dataArea;
 		
@@ -268,7 +261,31 @@ class IFD{
 			numFields = 0x0000;
 			memcpy(offsetNextIFD, ifdOffset, 4);
 		}
-	
+		
+		vector<unsigned char> getIFD(){
+			vector<unsigned char> ifdBytes;
+			
+			// Add numFields as bytes
+			ifdBytes.push_back((numFields >> 8) & 0xFF);
+			ifdBytes.push_back(numFields & 0xFF);
+			
+			// Add each field
+			for(int i = 0; i < fields.size(); i++){
+				vector<unsigned char> field = fields.at(i).getField();
+				ifdBytes.insert(end(ifdBytes), begin(field), end(field));
+			}
+			
+			// Add offset to next IFD
+			for(int i = 0; i < 4; i++){
+				ifdBytes.push_back(offsetNextIFD[i]);
+			}
+			
+			// Add data area
+			ifdBytes.insert(end(ifdBytes), begin(dataArea), end(dataArea));
+			
+			return ifdBytes;
+		}
+		
 		// Adds a new IFD field
 		void addField(IFDField newField){
 			numFields++;
@@ -281,11 +298,10 @@ class IFD{
 			fields.push_back(newField);
 			
 			// Retrieve data byte array and size
-			int dataSize = newField.getDataSize();
 			vector<unsigned char> data = newField.getData();
 			
 			// Add each byte of field data to data area
-			for(int i = 0; i < dataSize; i++){
+			for(int i = 0; i < data.size(); i++){
 				dataArea.push_back(data.at(i));
 			}
 			
@@ -293,7 +309,7 @@ class IFD{
 			// TODO Update offset in field
 		}
 		
-		// TODO update offsets
+		// TODO Update offsets function
 		
 		// Returns size of IFD
 		short getSize(){
@@ -347,8 +363,35 @@ class APP1{
 			exifIFD = exif;
 		}
 		
-		// TODO Convert everything into byte array to write to file
-		void getApp1(){
+		// Return everything as byte vector to write to file
+		vector<unsigned char> getApp1(){
+			vector<unsigned char> app1Bytes;
+			
+			// Add APP1 header
+			for(int i = 0; i < 2; i++)
+				app1Bytes.push_back(app1Marker[i]);
+			for(int i = 0; i < 2; i++)
+				app1Bytes.push_back(app1Size[i]);
+			for(int i = 0; i < 6; i++)
+				app1Bytes.push_back(exifMarker[i]);
+			
+			// Add TIFF header
+			for(int i = 0; i < 2; i++)
+				app1Bytes.push_back(endianess[i]);
+			for(int i = 0; i < 2; i++)
+				app1Bytes.push_back(tiffMarker[i]);
+			for(int i = 0; i < 4; i++)
+				app1Bytes.push_back(offset0IFD[i]);
+			
+			// Add 0IFD
+			vector<unsigned char> ifd0Bytes = ifd0.getIFD();
+			app1Bytes.insert(end(app1Bytes), begin(ifd0Bytes), end(ifd0Bytes));
+			
+			// Add EXIF IFD
+			vector<unsigned char> exifBytes = exifIFD.getIFD();
+			app1Bytes.insert(end(app1Bytes), begin(exifBytes), end(exifBytes));
+			
+			return app1Bytes;
 		}
 		
 		// Sets the APP1 size bytes; size of APP1 headers + IFD0 + EXIF IFD
@@ -429,11 +472,29 @@ int main(){
 	cout << "ifd0 size: 0x" << ifd0.getSize() << endl;
 	cout << "exifIfd size: 0x" << exifIFD.getSize() << endl;
 	cout << "APP1 total size: 0x" << app1.getTotalSize() << endl;
+	cout << endl << endl << endl;
 	
 	
-	// TODO Calculate offsets for data area in EXIF IFD
+	
+	
+	
+	// TODO Calculate offsets for data area in EXIF IFD, and EXIF OFFSET in IFD0, then update offsets
 	app1.getTiffHeaderSize();
 	app1.getIFD0Size();
+	
+	
+	
+	
+	
+	
+	// Export APP1 header
+	vector<unsigned char> app = app1.getApp1();
+	// Convert to byte array for writing
+	unsigned char appBytes[app.size()];
+	copy(app.begin(), app.end(), appBytes);
+	
+	
+	printBytes(appBytes, app.size());	// TODO remove
 	
 	/*
 	// Get filesize in bytes
