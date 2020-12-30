@@ -14,25 +14,35 @@ Many of the modern conveniences of a digital camera are not available when using
 
 When taking photos, this tool is used alongside the camera to make note of picture-taking conditions such as aperture and shutter speed. After the film is developed and scanned, an XML file can be generated for use with the second part of the tool.
 
-Aperture is referred to by f-numbers, represented by a `double`. The standard full-stop f-number scale is listed here for reference:
+Aperture is referred to by f-numbers, represented by a `double`. The standard full-stop f-number scale is listed here for reference (the XML file stores aperture multiplied by a factor of `10`):
 
-1.4, 2, 2.8, 4, 5.6, 8, 11, 16, 22
+| f-stop | XML Value (f-stop * 10) |
+| :----: | :---------------------: |
+|  1.4   |           14            |
+|   2    |           20            |
+|  2.8   |           28            |
+|   4    |           40            |
+|  5.6   |           56            |
+|   8    |           80            |
+|   11   |           110           |
+|   16   |           160           |
+|   22   |           220           |
 
-Shutter speed is referred to by (fractions of) seconds, and are represented by a `double`. Common shutter speeds and the equivalent `double` are listed here for convenience:
+Shutter speed is referred to by (fractions of) seconds, and are represented by a `double`. Common shutter speeds and the equivalent `double` are listed here for convenience (XML stores the shutter speed `double` multiplied by a factor of `1000`):
 
-| Shutter Speed | double |
-| :-----------: | :----: |
-|    1/1000     | 0.001  |
-|     1/500     | 0.002  |
-|     1/250     | 0.004  |
-|     1/125     | 0.008  |
-|     1/60      | 0.016  |
-|     1/30      |  0.03  |
-|     1/15      |  0.06  |
-|      1/8      | 0.125  |
-|      1/4      |  0.25  |
-|      1/2      |  0.5   |
-|       1       |   1    |
+| Shutter Speed | double | XML Value (Shutter Speed * 1000) |
+| :-----------: | :----: | :------------------------------: |
+|    1/1000     | 0.001  |                1                 |
+|     1/500     | 0.002  |                2                 |
+|     1/250     | 0.004  |                4                 |
+|     1/125     | 0.008  |                8                 |
+|     1/60      | 0.016  |                16                |
+|     1/30      |  0.03  |                30                |
+|     1/15      |  0.06  |                60                |
+|      1/8      | 0.125  |               125                |
+|      1/4      |  0.25  |               250                |
+|      1/2      |  0.5   |               500                |
+|       1       |   1    |               1000               |
 
 
 
