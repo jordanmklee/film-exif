@@ -126,7 +126,7 @@ Below are some sources that were used in creating `film-exif`, containing more i
 
 ## Potential Features
 
-After basic functionality is completed, the following features may be implemented:
+After basic functionality is completed, the following features may be considered for implementation:
 
 - Different f-number scales (eg. half stop, third stop)
 - Custom f-number scales (ie. for different lenses that have specific f-stops)
