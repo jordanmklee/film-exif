@@ -63,11 +63,11 @@ However, there may be existing APP1 segments (and therefore existing Exif inform
 | ----------- | --------------------------------------------------- | -------------------- | ------------ |
 | APP1 Size   | Size (including size marker, excluding APP1 marker) | 0xXXXX               | 2            |
 | Exif Header | "Exif\null\null"                                    | 0x4578 0x6966 0x0000 | 6            |
-| TIFF Header | "II" for little endian, "MM" for big endian         | 0x4949               | 2            |
-|             | TIFF ID (always the same)                           | 0x2A00               | 2            |
-|             | Offset to 0th IFD (from TIFF Header; 8 bytes)       | 0x0800 0x0000        | 4            |
+| TIFF Header | "II" for little endian, "MM" for big endian         | 0x4D4D               | 2            |
+|             | TIFF ID (always the same)                           | 0x002A               | 2            |
+|             | Offset to 0th IFD (from TIFF Header; 8 bytes)       | 0x0000 0x0008        | 4            |
 
-Note that `film-exif` uses little-endian, and all hex numbers are represented here as such.
+Note that `film-exif` uses big-endian, and all hex numbers are represented here as such.
 
 Inside APP1, Image Frame Directories (IFDs) organize the information. There are a number of IFDs, but `film-exif` only uses IFD0 and the EXIF IFD, which appear in that order after the APP1 header. IFD0 is a "table of contents" for other IFDs in APP1, while EXIF IDFs contain the Exif information. IFDs have the following structure:
 
@@ -89,7 +89,7 @@ Inside APP1, Image Frame Directories (IFDs) organize the information. There are 
 | Tag ID  | These are non-unique across IFDs!                            | 2            |
 | Type ID | 1 - Byte<br />2 - Byte Array (ie. ASCII)<br />3 - Short (uint16)<br />4 - Long (uint32)<br />5 - Rational (2 * uint32)<br />7 - Undefined (byte array)<br />9 - SLong (int32)<br />10 - SRational (2 * int32) | 2            |
 | Count   | ie. Number of components                                     | 4            |
-| Value   | If value is greater than 4 bytes, this contains offset to the data in the data area | 4            |
+| Value   | If value is greater than 4 bytes, this contains offset to the data in the data area (starting at the TIFF header; ie. 0x4949) | 4            |
 
 A list of EXIF and TIFF tags can be found at https://exiftool.org/TagNames/EXIF.html
 
