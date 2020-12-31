@@ -504,16 +504,29 @@ class TIFFHeader{
 };
 
 class APP1{
-	public:
+	private:
 		APP1Header* app1Header;
 		TIFFHeader* tiffHeader;
 		IFD ifd0;
 		IFD exifIFD;
 		
-		// Creates a new APP1 object with headers and IFDs
+	public:
+		// Creates a new APP1 object with the following:
+		// APP1 header
+		// TIFF header set to big-endian
+		// IFD0 (with EXIF Offset field, pointing to EXIF IFD)
+		// EXIF IFD (with no fields)
 		APP1(){
 			app1Header = new APP1Header();
 			tiffHeader = new TIFFHeader(1);	// 1 for big-endian
+			
+			// Add EXIF Offset field to IFD0, and set the value
+			ifd0.addField(ExifIFDField());
+			
+			unsigned char intBuffer[4];	// Buffer for int conversion
+			int exifOffset = tiffHeader->getSize() + ifd0.getSize();
+			intToByteArray(exifOffset, intBuffer);
+			ifd0.setFieldValue(exifIFDTag, intBuffer);
 		}
 		
 		// Returns entire APP1 segment as a vector of bytes
@@ -564,37 +577,36 @@ class APP1{
 			// +12 to account for the new field being added
 			return getSize() - app1Header->getSize() + 12;
 		}
+		
+		// Adds EXIF metadata to APP1 segment
+		// tagID - EXIF tag ID of the kind of metadata
+		// value - EXIF data defined by film-exif (see documentation)
+		void addMetadata(unsigned char tagID[], int value){
+			// Get offset to next available data area as byte array
+			unsigned char intBuffer[4];
+			intToByteArray(getNextDataOffset(), intBuffer);
+			
+			// Add field to EXIF IFD corresponding to tagID, with arg value
+			if(	tagID[0] == apertureIFDTag[0] &&
+				tagID[1] == apertureIFDTag[1])
+				exifIFD.addField(ApertureIFDField(value));
+			else if(tagID[0] == shutterSpeedIFDTag[0] &&
+					tagID[1] == shutterSpeedIFDTag[1])
+				exifIFD.addField(ShutterSpeedIFDField(value));
+			
+			// Set offset to point to correct data
+			exifIFD.setFieldValue(tagID, intBuffer);
+		}
 };
 
 
 int main(){
 	cout << hex;				// Print in hex
-	unsigned char intBuffer[4];	// Buffer for int conversions
 	
-	
-	
+	// Create APP1 segment
 	APP1 app1;
-	
-	// Add EXIF Offset field to IFD0, and set the value
-	app1.ifd0.addField(ExifIFDField());
-	
-	int exifOffset = app1.tiffHeader->getSize() + app1.ifd0.getSize();
-	intToByteArray(exifOffset, intBuffer);
-	app1.ifd0.setFieldValue(exifIFDTag, intBuffer);
-	
-	
-	// Add aperture field and set value (ie. offset to data)
-	intToByteArray(app1.getNextDataOffset(), intBuffer);
-	app1.exifIFD.addField(ApertureIFDField(14));
-	app1.exifIFD.setFieldValue(apertureIFDTag, intBuffer);
-	
-	
-	// Add shutter speed field and set value (ie. offset to data)
-	intToByteArray(app1.getNextDataOffset(), intBuffer);
-	app1.exifIFD.addField(ShutterSpeedIFDField(125));
-	app1.exifIFD.setFieldValue(shutterSpeedIFDTag, intBuffer);
-	
-	
+	app1.addMetadata(apertureIFDTag, 14);
+	app1.addMetadata(shutterSpeedIFDTag, 125);
 	
 	// Export APP1
 	vector<unsigned char> app = app1.getApp1();
@@ -603,7 +615,7 @@ int main(){
 	unsigned char appBytes[app.size()];
 	copy(app.begin(), app.end(), appBytes);
 	
-	//prettyPrintAPP1(appBytes, app.size());	// TODO remove
+	prettyPrintAPP1(appBytes, app.size());	// TODO remove
 	
 	
 	
