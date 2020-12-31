@@ -262,7 +262,7 @@ class IFD{
 			memcpy(offsetNextIFD, ifdOffset, 4);
 		}
 		
-		vector<unsigned char> getIFD(){
+		vector<unsigned char> get(){
 			vector<unsigned char> ifdBytes;
 			
 			// Add numFields as bytes
@@ -332,35 +332,95 @@ class IFD{
 		}
 };
 
-
-class APP1{
+class APP1Header{
 	private:
-		// APP1
-		unsigned char app1Marker[2];
-		unsigned char app1Size[2];
+		unsigned char segMarker[2];
+		unsigned char size[2];
 		unsigned char exifMarker[6];
 	
-		// TIFF header
+	public:
+		APP1Header(){
+			memcpy(segMarker, app1Tag, 2);
+			memcpy(exifMarker, exifID, 6);
+		}
+		
+		// Sets the APP1 size bytes ((APP1 headers - 0xFFE1 marker) + IFD0 + EXIF IFD)
+		void setSize(short newSize){
+			size[0] = (newSize >> 8) & 0xFF;
+			size[1] = newSize & 0xFF;
+		}
+		
+		short getLength(){
+			return 0x000a;
+		}
+		
+		// TODO try to make this return byte array instead?
+		vector<unsigned char> get(){
+			vector<unsigned char> header;
+			
+			for(int i = 0; i < 2; i++)
+				header.push_back(segMarker[i]);
+			for(int i = 0; i < 2; i++)
+				header.push_back(size[i]);
+			for(int i = 0; i < 6; i++)
+				header.push_back(exifMarker[i]);
+				
+			return header;
+		}
+};
+
+class TIFFHeader{
+	private:
 		unsigned char endianess[2];
 		unsigned char tiffMarker[2];
 		unsigned char offset0IFD[4];
-		
-		// IFDs
-		IFD ifd0;
-		IFD exifIFD;
 	
 	public:
-		APP1(IFD zero, IFD exif){
-			memcpy(app1Marker, app1Tag, 2);
-			memcpy(exifMarker, exifID, 6);
-			
-			memcpy(endianess, bigEndianID, 2);
+		// Constructor; arg for endianess (0 for little, 1 for big)
+		TIFFHeader(short end){
+			if(end == 0)
+				memcpy(endianess, littleEndianID, 2);
+			else if(end == 1)
+				memcpy(endianess, bigEndianID, 2);
+				
 			memcpy(tiffMarker, tiffID, 2);
+			
 			unsigned char eightBytesOffset[4] = {0x00, 0x00, 0x00, 0x08};	// 8 byte offset to 0th IFD
 			memcpy(offset0IFD, eightBytesOffset, 4);
+		}
+		
+		short getLength(){
+			return 0x0008;
+		}
+		
+		vector<unsigned char> get(){
+			vector<unsigned char> header;
 			
-			ifd0 = zero;
-			exifIFD = exif;
+			for(int i = 0; i < 2; i++)
+				header.push_back(endianess[i]);
+			for(int i = 0; i < 2; i++)
+				header.push_back(tiffMarker[i]);
+			for(int i = 0; i < 4; i++)
+				header.push_back(offset0IFD[i]);
+				
+			return header;
+		}
+};
+
+class APP1{
+	public:
+		APP1Header* app1Header;
+		TIFFHeader* tiffHeader;
+		IFD ifd0;
+		IFD exifIFD;
+		
+		short app1TotalSize;
+		
+		APP1(){
+			app1Header = new APP1Header();
+			tiffHeader = new TIFFHeader(1);
+			
+			updateSegSize();
 		}
 		
 		// Return everything as byte vector to write to file
@@ -368,36 +428,28 @@ class APP1{
 			vector<unsigned char> app1Bytes;
 			
 			// Add APP1 header
-			for(int i = 0; i < 2; i++)
-				app1Bytes.push_back(app1Marker[i]);
-			for(int i = 0; i < 2; i++)
-				app1Bytes.push_back(app1Size[i]);
-			for(int i = 0; i < 6; i++)
-				app1Bytes.push_back(exifMarker[i]);
+			vector<unsigned char> app1HeaderBytes = app1Header->get();
+			app1Bytes.insert(end(app1Bytes), begin(app1HeaderBytes), end(app1HeaderBytes));
 			
 			// Add TIFF header
-			for(int i = 0; i < 2; i++)
-				app1Bytes.push_back(endianess[i]);
-			for(int i = 0; i < 2; i++)
-				app1Bytes.push_back(tiffMarker[i]);
-			for(int i = 0; i < 4; i++)
-				app1Bytes.push_back(offset0IFD[i]);
+			vector<unsigned char> tiffHeaderBytes = tiffHeader->get();
+			app1Bytes.insert(end(app1Bytes), begin(tiffHeaderBytes), end(tiffHeaderBytes));
 			
 			// Add 0IFD
-			vector<unsigned char> ifd0Bytes = ifd0.getIFD();
+			vector<unsigned char> ifd0Bytes = ifd0.get();
 			app1Bytes.insert(end(app1Bytes), begin(ifd0Bytes), end(ifd0Bytes));
 			
 			// Add EXIF IFD
-			vector<unsigned char> exifBytes = exifIFD.getIFD();
+			vector<unsigned char> exifBytes = exifIFD.get();
 			app1Bytes.insert(end(app1Bytes), begin(exifBytes), end(exifBytes));
 			
 			return app1Bytes;
 		}
 		
-		// Sets the APP1 size bytes; size of APP1 headers + IFD0 + EXIF IFD
-		void setApp1Size(short newSize){
-			app1Size[0] = (newSize >> 8) & 0xFF;
-			app1Size[1] = newSize & 0xFF;
+		// Updates bytes in APP1 header to reflect size
+		// TODO maybe just do this once, at the printout?
+		void updateSegSize(){
+			app1Header->setSize(getTotalSize() - 2);	// Subtract the 0xFFE1 marker
 		}
 		
 		// Get size of entire APP1 (APP1 headers, IFD0, EXIF IFD) in bytes
@@ -415,25 +467,10 @@ class APP1{
 		short getHeadersSize(){
 			short headersSize = 0x0000;
 			
-			headersSize += sizeof(app1Marker);
-			headersSize += sizeof(app1Size);
-			
-			headersSize += sizeof(exifMarker);
-			
-			headersSize += getTiffHeaderSize();
+			headersSize += app1Header->getLength();
+			headersSize += tiffHeader->getLength();
 			
 			return headersSize;
-		}
-		
-		// Get size of the TIFF header in bytes
-		short getTiffHeaderSize(){
-			short headerSize = 0x0000;
-			
-			headerSize += sizeof(endianess);
-			headerSize += sizeof(tiffMarker);
-			headerSize += sizeof(offset0IFD);
-			
-			return headerSize;
 		}
 		
 		int getIFD0Size(){
@@ -450,37 +487,16 @@ int main(){
 	ifstream jpg("./img/img016.jpg", ios::binary | ios::ate);
 	ofstream jpgExif("./img/img016exif.jpg", ios::binary | ios::trunc);
 	
-	
-	IFD ifd0;
-	ExifIFDField eifd;
-	ifd0.addField(eifd);
-	
-	IFD exifIFD;
-	ApertureIFDField aper;
-	aper.setApertureData(14);
-	exifIFD.addField(aper);
-	aper.getField();
+	APP1 app1;
+	cout << app1.app1Header->getLength() << endl;
 	
 	
-	ShutterSpeedIFDField ss;
-	ss.setShutterSpeedData(250);
-	exifIFD.addField(ss);
-	
-	APP1 app1(ifd0, exifIFD);
-	app1.setApp1Size(app1.getTotalSize() - 2);	// Subtract 2 since APP1 marker (0xFFE1) is not included
-	
-	cout << "ifd0 size: 0x" << ifd0.getSize() << endl;
-	cout << "exifIfd size: 0x" << exifIFD.getSize() << endl;
-	cout << "APP1 total size: 0x" << app1.getTotalSize() << endl;
-	cout << endl << endl << endl;
 	
 	
 	
 	
 	
 	// TODO Calculate offsets for data area in EXIF IFD, and EXIF OFFSET in IFD0, then update offsets
-	app1.getTiffHeaderSize();
-	app1.getIFD0Size();
 	
 	
 	
