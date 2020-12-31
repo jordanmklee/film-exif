@@ -65,7 +65,7 @@ The section below gives a brief outline on the structure of a JPEG file and show
 
 APPn segments are application specific, and the first 2 bytes of which denote which APP segment it is. Multiple segments of the same type can exist within the same JPEG file. Exif information is stored in APP1, which appears after SOI and APP0 (if it exists). Other segments exist in the `...`, containing information such as the thumbnail information and the compressed image data. `film-exif` does not deal with them; only with APP1. 
 
-However, there may be existing APP1 segments (and therefore existing Exif information) from scanners or software used to create the JPEG - `film-exif` will delete these since they do not reflect the photographic conditions of the film camera.
+However, there may be existing APP1 segments (and therefore existing Exif information) from scanners or software used to create the JPEG - `film-exif` will delete these since they do not reflect the photographic conditions of the film camera. Other APPn segments contain other forms of metadata, such as JFIF, ICC, FlashPix, and Photoshop's IPTC. `film-exif` will delete these segments as well.
 
 ##### APP1
 
@@ -110,7 +110,7 @@ In implementation, IFD field values are set from the IFD object, since they requ
 ## Assumptions
 
 - `film-exif` can only parse JPEG files.
-- There can be multiple APP1 segments in one JPEG file, and `film-exif` assumes that all existing metadata is a result from the scanner/software, and will delete all existing APP1 segments before writing its own.
+- `film-exif` assumes that all existing metadata is a result from the scanner/software, and will delete all existing APPn segments before writing its own.
 
 
 
