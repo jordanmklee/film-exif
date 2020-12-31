@@ -56,13 +56,26 @@ void prettyPrintAPP1(unsigned char arr[], int len){
 	}
 }
 
-// Converts int to byte array
+// Converts unsigned integer to byte array
 // Must create an byte[4] buffer where byte array is needed
-void intToByteArray(int i, unsigned char* bytes){
+void uintToByteArray(unsigned int i, unsigned char* bytes){
 	bytes[0] = (i >> 24) & 0xFF;
 	bytes[1] = (i >> 16) & 0xFF;
 	bytes[2] = (i >> 8) & 0xFF;
 	bytes[3] = i & 0xFF;
+}
+
+// Converts byte array of size 4 to unsigned int
+unsigned int byteToUInt(unsigned char bytes[]){
+	return (	(bytes[0] << 24) |
+				(bytes[1] << 16) |
+				(bytes[2] << 8) |
+				bytes[3]);
+}
+
+// Converts byte array of size 2 to unsigned short
+unsigned short byteToUShort(unsigned char bytes[]){
+	return (bytes[0] << 8) | bytes[1];
 }
 
 class IFDField{
@@ -311,7 +324,7 @@ class ShutterSpeedIFDField : public IFDFieldWithData{
 
 class IFD{
 	private:
-		short numFields;				// short (2 bytes) so it can be incremented
+		unsigned short numFields;		// ushort (2 bytes) so it can be incremented
 		vector<IFDField> fields;
 		unsigned char offsetNextIFD[4];
 		vector<unsigned char> dataArea;
@@ -381,17 +394,13 @@ class IFD{
 				if(	fields.at(i).isTag(exifIFDTag) || 
 					fields.at(i).isTag(apertureIFDTag) || 
 					fields.at(i).isTag(shutterSpeedIFDTag)){
-					// Convert value to int for addition
-					int newOffset = (	fields.at(i).getValue()[0] << 24 |
-										fields.at(i).getValue()[1] << 16 |
-										fields.at(i).getValue()[2] << 8 |
-										fields.at(i).getValue()[3]);
 					
+					unsigned int newOffset = byteToUInt(fields.at(i).getValue());
 					newOffset += 12;	// New field adds 12 bytes
 					
 					// Convert newOffset back to byte array for writing
 					unsigned char newOffsetBytes[4];
-					intToByteArray(newOffset, newOffsetBytes);
+					uintToByteArray(newOffset, newOffsetBytes);
 					
 					fields.at(i).setValue(newOffsetBytes);		// Write new offset to field value
 				}
@@ -413,8 +422,8 @@ class IFD{
 		}
 		
 		// Returns size of IFD
-		short getSize(){
-			short ifdSize = 0x00;
+		unsigned short getSize(){
+			unsigned short ifdSize = 0x00;
 			
 			ifdSize += sizeof(numFields);
 			ifdSize += (numFields * 12);		// Each IFD field is 12 bytes long
@@ -444,7 +453,7 @@ class APP1Header{
 		}
 		
 		// Returns the length of the APP1 header
-		short getSize(){
+		unsigned short getSize(){
 			return 0x000A;	// 2 + 2 + 6 = 10 = 0xA
 		}
 		
@@ -484,7 +493,7 @@ class TIFFHeader{
 		}
 		
 		// Returns the length of the TIFF header
-		short getSize(){
+		unsigned short getSize(){
 			return 0x0008;	// 2 + 2 + 4 = 8 = 0x8
 		}
 		
@@ -524,8 +533,8 @@ class APP1{
 			ifd0.addField(ExifIFDField());
 			
 			unsigned char intBuffer[4];	// Buffer for int conversion
-			int exifOffset = tiffHeader->getSize() + ifd0.getSize();
-			intToByteArray(exifOffset, intBuffer);
+			unsigned int exifOffset = tiffHeader->getSize() + ifd0.getSize();
+			uintToByteArray(exifOffset, intBuffer);
 			ifd0.setFieldValue(exifIFDTag, intBuffer);
 		}
 		
@@ -559,8 +568,8 @@ class APP1{
 		}
 		
 		// Get size of entire APP1 (APP1 headers, IFD0, EXIF IFD) in bytes (including APP1 marker)
-		short getSize(){
-			short size = 0x0000;
+		unsigned short getSize(){
+			unsigned short size = 0x0000;
 			
 			size += app1Header->getSize();
 			size += tiffHeader->getSize();
@@ -572,7 +581,7 @@ class APP1{
 		
 		// Computes the next offset where data can be entered in the EXIF IFD
 		// Note: must be computed before adding the next field with data!
-		short getNextDataOffset(){
+		unsigned short getNextDataOffset(){
 			// -app1Header since offset is calculated starting at the TIFF header
 			// +12 to account for the new field being added
 			return getSize() - app1Header->getSize() + 12;
@@ -584,7 +593,7 @@ class APP1{
 		void addMetadata(unsigned char tagID[], int value){
 			// Get offset to next available data area as byte array
 			unsigned char intBuffer[4];
-			intToByteArray(getNextDataOffset(), intBuffer);
+			uintToByteArray(getNextDataOffset(), intBuffer);
 			
 			// Add field to EXIF IFD corresponding to tagID, with arg value
 			if(	tagID[0] == apertureIFDTag[0] &&
@@ -648,7 +657,7 @@ int main(){
 			jpg.read((char*)&buf, 2);	// Read length of APPn segment
 			
 			// Read through the APPn segment and omit writing segment to output JPG
-			unsigned short segLength = (buf[0] << 8) | buf[1];	// Convert length byte array to unsigned short
+			unsigned short segLength = byteToUShort(buf);	// Convert length byte array to unsigned short
 			for(int x = 0; x < (segLength - 2); x++)	// segLength is subtracted by 2 to remove the 2 bytes denoting length (was already read)
 				jpg.read((char*)&buf, 1);
 		}
