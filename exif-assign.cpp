@@ -603,6 +603,25 @@ class APP1{
 int main(){
 	cout << hex;	// Print in hex
 	
+	// Open JPG as binary file
+	ifstream jpg("./img/steak.jpg", ios::binary | ios::ate);
+	ofstream jpgExif("./img/steakExif.jpg", ios::binary | ios::trunc);
+	
+	
+	// Get filesize in bytes
+	int filesize = jpg.tellg();
+	jpg.seekg(0, ios::beg);		// Reset for reading
+	
+	unsigned char buf[2];
+	
+	// Read SOI (0xFFD8) from input JPG and write to output JPG
+	jpg.read((char*)&buf, 2);
+	jpgExif.write((char*)buf, 2);
+	
+	
+	
+	
+	
 	// Create APP1 segment with metadata
 	APP1 app1;
 	app1.addMetadata(apertureIFDTag, 14);
@@ -620,28 +639,11 @@ int main(){
 	
 	
 	
-	
-	
-	
-	// Open JPG as binary file
-	ifstream jpg("./img/steak.jpg", ios::binary | ios::ate);
-	ofstream jpgExif("./img/steakExif.jpg", ios::binary | ios::trunc);
-	
-	
-	// Get filesize in bytes
-	int filesize = jpg.tellg();
-	jpg.seekg(0, ios::beg);		// Reset for reading
-	
-	unsigned char buf[2];
-	
-	// Read SOI (0xFFD8) from input JPG and write to output JPG
-	jpg.read((char*)&buf, 2);
-	jpgExif.write((char*)buf, 2);
-	
 	// Write generated APP1 to output JPG
 	jpgExif.write((char*)&appBytes, app1.getSize());
 	
-	// Read input JPG in 2-byte chunks
+	// Read input JPG in 2-byte chunks and writes it to output JPG,
+	// omitting any APPn segments
 	for(int i = 1; i < filesize; i+=2){	// Incremented by 2 since input JPG is read in 2-byte increments
 		jpg.read((char*)&buf, 2);
 		
