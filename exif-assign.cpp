@@ -54,16 +54,23 @@ void prettyPrintAPP1(unsigned char arr[], int len){
 	}
 }
 
+void intToByteArray(int i, unsigned char* bytes){
+	bytes[0] = (i >> 24) & 0xFF;
+	bytes[1] = (i >> 16) & 0xFF;
+	bytes[2] = (i >> 8) & 0xFF;
+	bytes[3] = i & 0xFF;
+}
+
 class IFDField{
 	private:
 		unsigned char tagID[2];
 		unsigned char typeID[2];
 		unsigned char count[4];
 		unsigned char value[4];
-	
+		
 	public:
 		// Return field as a vector of bytes
-		vector<unsigned char> getField(){
+		vector<unsigned char> get(){
 			vector<unsigned char> field;
 			
 			// Add field elements to vector
@@ -100,6 +107,10 @@ class IFDField{
 			memcpy(value, newValue, 4);
 		}
 		
+		unsigned char* getValue(){
+			return value;
+		}
+		
 		// Checks if this field is tagID
 		bool isTag(unsigned char id[]){
 			if(tagID[0] == id[0] && tagID[1] == id[1])
@@ -122,7 +133,7 @@ class ExifIFDField : public IFDField{
 			setCount(count);
 			unsigned char empty[] = {0x00, 0x00, 0x00, 0x00};
 			setValue(empty);
-		}	
+		}
 };
 
 class IFDFieldWithData : public IFDField{
@@ -139,12 +150,6 @@ class IFDFieldWithData : public IFDField{
 		
 		// Returns the data vector
 		vector<unsigned char> getData(){
-			cout << "Data" << endl;
-			for(int i = 0; i < data.size(); i++){
-				printf("%02X", data.at(i));
-				cout << " ";
-			}
-			cout << endl << endl;
 			return data;
 		}
 };
@@ -155,13 +160,14 @@ class ApertureIFDField : public IFDFieldWithData{
 		unsigned char apertureDenominator[4];
 	
 	public:
-		ApertureIFDField(){
+		ApertureIFDField(int aperture){
 			unsigned char type[2] = {0x00, 0x05};				// Type 5 = rational
 			unsigned char count[4] = {0x00, 0x00, 0x00, 0x01};	// Count = 1
 			
 			setTagID(apertureIFDTag);
 			setTypeID(type);
 			setCount(count);
+			setApertureData(aperture);
 		}
 		
 		// Aperture is stored in XML as integer = (f-stop * 10)
@@ -219,13 +225,14 @@ class ShutterSpeedIFDField : public IFDFieldWithData{
 		unsigned char shutterSpeedDenominator[4];
 	
 	public:
-		ShutterSpeedIFDField(){
+		ShutterSpeedIFDField(int shutterSpeed){
 			unsigned char type[2] = {0x00, 0x05};				// Type 5 = rational
 			unsigned char count[4] = {0x00, 0x00, 0x00, 0x01};	// Count = 1
 			
 			setTagID(shutterSpeedIFDTag);
 			setTypeID(type);
 			setCount(count);
+			setShutterSpeedData(shutterSpeed);
 		}
 		
 		// Shutter speed is stored in XML as integer = (time in seconds) * 1000
@@ -307,7 +314,7 @@ class IFD{
 			
 			// Add each field
 			for(int i = 0; i < fields.size(); i++){
-				vector<unsigned char> field = fields.at(i).getField();
+				vector<unsigned char> field = fields.at(i).get();
 				ifdBytes.insert(end(ifdBytes), begin(field), end(field));
 			}
 			
@@ -340,12 +347,47 @@ class IFD{
 			for(int i = 0; i < data.size(); i++){
 				dataArea.push_back(data.at(i));
 			}
-			
-			// TODO Calculate offsets
-			// TODO Update offset in field
 		}
 		
-		// TODO Update offsets function
+		// Updates offsets after addition of new field
+		void updateOffsets(){
+			// Last field in vector was just added, the offset is already correct
+			// so it does not need to be updated
+			for(int i = 0; i < fields.size() - 1; i++){
+				
+				cout << "updating " << i << endl;
+				
+				// This field has an offset to data; adding a field changes that offset
+				if(	fields.at(i).isTag(exifIFDTag) || 
+					fields.at(i).isTag(apertureIFDTag) || 
+					fields.at(i).isTag(shutterSpeedIFDTag)){
+					// Convert value to int for addition
+					int newOffset = (	fields.at(i).getValue()[0] << 24 |
+										fields.at(i).getValue()[1] << 16 |
+										fields.at(i).getValue()[2] << 8 |
+										fields.at(i).getValue()[3]);
+					
+					
+					cout << newOffset << endl;	// TODO
+					newOffset += 12;	// New field adds 12 bytes
+					cout << newOffset << endl << endl; // TODO
+					
+					
+					// Convert newOffset back to byte array for writing
+					unsigned char newOffsetBytes[4];
+					// TODO make this a function?
+					newOffsetBytes[0] = (newOffset >> 24) & 0xFF;
+					newOffsetBytes[1] = (newOffset >> 16) & 0xFF;
+					newOffsetBytes[2] = (newOffset >> 8) & 0xFF;
+					newOffsetBytes[3] = newOffset & 0xFF;
+					fields.at(i).setValue(newOffsetBytes);		
+				}
+				
+				
+				
+			}
+		}
+		
 		// Sets the value of a field by tagID
 		void setFieldValue(unsigned char tagID[], unsigned char newValue[]){
 			// Look for field
@@ -360,9 +402,6 @@ class IFD{
 				}
 			}
 			if(!fieldFound){
-			
-			
-			
 				// TODO produce error instead?
 				cout << "[ERROR] Field not found!" << endl << endl;
 			}
@@ -382,10 +421,12 @@ class IFD{
 			return ifdSize;
 		}
 		
-		// Retrieves the next offset (in bytes) where data can be inserted
-		// Offsets for IFD entries are calculated from the beginning of the TIFF header
-		void getDataOffset(){
-			// TODO
+		short getDataAreaSize(){
+			return dataArea.size();
+		}
+		
+		short getNumFields(){
+			return numFields;
 		}
 };
 
@@ -528,11 +569,6 @@ class APP1{
 			
 			return headersSize;
 		}
-		
-		int getIFD0Size(){
-			return ifd0.getSize();			
-		}
-	
 };
 
 
@@ -549,24 +585,11 @@ int main(){
 	
 	
 	
-	// TODO remove print IFD0
-	cout << endl << "ifd0" << endl;
-	vector<unsigned char> ifd = app1.ifd0.get();
-	// Convert to byte array for writing
-	unsigned char ifdBytes[ifd.size()];
-	copy(ifd.begin(), ifd.end(), ifdBytes);
-	printBytes(ifdBytes, ifd.size());
-	cout << endl << endl;
-	
-	
-	
-	
-	
-	
 	// Update EXIF Offset
-	// TODO Make this a function
+	// TODO update documentation: value is set in IFD object cause offsets need IFD context to be calculated
 	int newOffset = app1.tiffHeader->getLength() + app1.ifd0.getSize();
 	unsigned char newOffsetBytes[4];
+	// TODO Make this a function
 	newOffsetBytes[0] = (newOffset >> 24) & 0xFF;
 	newOffsetBytes[1] = (newOffset >> 16) & 0xFF;
 	newOffsetBytes[2] = (newOffset >> 8) & 0xFF;
@@ -578,32 +601,43 @@ int main(){
 	
 	
 	
-	
-	// TODO remove print IFD0
-	cout << endl << "ifd0" << endl;
-	ifd = app1.ifd0.get();
-	// Convert to byte array for writing
-	copy(ifd.begin(), ifd.end(), ifdBytes);
-	printBytes(ifdBytes, ifd.size());
-	cout << endl << endl;
+	unsigned char intBuffer[4];
 	
 	
 	
 	
 	
+	// Add aperture field and set value (ie. offset to data)
+	
+	int apertureOffset = 	app1.tiffHeader->getLength() 
+							+ app1.ifd0.getSize()
+							+ app1.exifIFD.getSize()
+							+ 12;
 	
 	
-	// TODO Add constructor with info?
-	app1.exifIFD.addField(ApertureIFDField());
-	app1.exifIFD.addField(ShutterSpeedIFDField());
+	app1.exifIFD.addField(ApertureIFDField(14));
+	intToByteArray(apertureOffset, intBuffer);
+	app1.exifIFD.setFieldValue(apertureIFDTag, intBuffer);
+	app1.exifIFD.updateOffsets();
 	
 	
 	
 	
-	cout << app1.app1Header->getLength() << endl;
+	// Add shutter speed field and set value (ie. offset to data)
+	
+	int shutterSpeedOffset = 	app1.tiffHeader->getLength() 
+							+ app1.ifd0.getSize()
+							+ app1.exifIFD.getSize()
+							+ 12;
+	
+	app1.exifIFD.addField(ShutterSpeedIFDField(125));
+	intToByteArray(shutterSpeedOffset, intBuffer);
+	app1.exifIFD.setFieldValue(shutterSpeedIFDTag, intBuffer);
+	
+	app1.exifIFD.updateOffsets();
 	
 	
-	// TODO Calculate offsets for data area in EXIF IFD, and EXIF OFFSET in IFD0, then update offsets
+	
 	
 	
 	
