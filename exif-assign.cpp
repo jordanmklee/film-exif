@@ -22,9 +22,35 @@ unsigned char tiffID[2] = {0x00, 0x2A};			// 42
 using namespace std;
 
 void printBytes(unsigned char arr[], int len){
-	for(int i = 0; i < len; i++){
+	for(int i = 0; i < len; i+=2){
 		printf("%02x", arr[i]);
+		printf("%02x", arr[i+1]);
 		cout << " ";
+	}
+}
+
+void prettyPrintAPP1(unsigned char arr[], int len){
+	for(int i = 0; i < len; i+=2){
+		printf("%02x", arr[i]);
+		printf("%02x", arr[i+1]);
+		cout << " ";
+		
+		if(	i == 0 ||
+			i == 2 ||
+			i == 8 ||
+			i == 10 ||
+			i == 12 ||
+			i == 16 ||
+			i == 18 ||
+			i == 30 ||
+			i == 34 ||
+			i == 36 ||
+			i == 48 ||
+			i == 60 ||
+			i == 64){
+				cout << endl;
+				
+			}
 	}
 }
 
@@ -56,22 +82,30 @@ class IFDField{
 			return field;
 		}
 		
-		void setTagID(unsigned char tag[]){
-			memcpy(tagID, tag, 2);
+		void setTagID(unsigned char newTag[]){
+			memcpy(tagID, newTag, 2);
 		}
 		
-		void setTypeID(unsigned char type[]){
-			memcpy(typeID, type, 2);
+		void setTypeID(unsigned char newType[]){
+			memcpy(typeID, newType, 2);
 		}
 		
-		void setCount(unsigned char c[]){
-			memcpy(count, c, 4);
+		void setCount(unsigned char newCount[]){
+			memcpy(count, newCount, 4);
 		
 		}
 		
 		// Set value or offset (if data greater than 4 bytes; offset from beginning of TIFF header)
-		void setValue(unsigned char v[]){
-			memcpy(value, v, 4);
+		void setValue(unsigned char newValue[]){
+			memcpy(value, newValue, 4);
+		}
+		
+		// Checks if this field is tagID
+		bool isTag(unsigned char id[]){
+			if(tagID[0] == id[0] && tagID[1] == id[1])
+				return true;
+			
+			return false;
 		}
 };
 
@@ -86,6 +120,8 @@ class ExifIFDField : public IFDField{
 			setTagID(exifIFDTag);
 			setTypeID(type);
 			setCount(count);
+			unsigned char empty[] = {0x00, 0x00, 0x00, 0x00};
+			setValue(empty);
 		}	
 };
 
@@ -310,6 +346,27 @@ class IFD{
 		}
 		
 		// TODO Update offsets function
+		// Sets the value of a field by tagID
+		void setFieldValue(unsigned char tagID[], unsigned char newValue[]){
+			// Look for field
+			bool fieldFound = false;
+			for(int i = 0; i < fields.size(); i++){
+				// Updates value of field if found
+				if(fields.at(i).isTag(tagID)){
+					fieldFound = true;
+					
+					fields.at(i).setValue(newValue);
+					
+				}
+			}
+			if(!fieldFound){
+			
+			
+			
+				// TODO produce error instead?
+				cout << "[ERROR] Field not found!" << endl << endl;
+			}
+		}
 		
 		// Returns size of IFD
 		short getSize(){
@@ -419,12 +476,12 @@ class APP1{
 		APP1(){
 			app1Header = new APP1Header();
 			tiffHeader = new TIFFHeader(1);
-			
-			updateSegSize();
 		}
 		
 		// Return everything as byte vector to write to file
 		vector<unsigned char> getApp1(){
+			updateSegSize();
+			
 			vector<unsigned char> app1Bytes;
 			
 			// Add APP1 header
@@ -447,7 +504,6 @@ class APP1{
 		}
 		
 		// Updates bytes in APP1 header to reflect size
-		// TODO maybe just do this once, at the printout?
 		void updateSegSize(){
 			app1Header->setSize(getTotalSize() - 2);	// Subtract the 0xFFE1 marker
 		}
@@ -488,12 +544,63 @@ int main(){
 	ofstream jpgExif("./img/img016exif.jpg", ios::binary | ios::trunc);
 	
 	APP1 app1;
+	app1.ifd0.addField(ExifIFDField());	// Add EXIF Offset field to IFD0
+	
+	
+	
+	
+	// TODO remove print IFD0
+	cout << endl << "ifd0" << endl;
+	vector<unsigned char> ifd = app1.ifd0.get();
+	// Convert to byte array for writing
+	unsigned char ifdBytes[ifd.size()];
+	copy(ifd.begin(), ifd.end(), ifdBytes);
+	printBytes(ifdBytes, ifd.size());
+	cout << endl << endl;
+	
+	
+	
+	
+	
+	
+	// Update EXIF Offset
+	// TODO Make this a function
+	int newOffset = app1.tiffHeader->getLength() + app1.ifd0.getSize();
+	unsigned char newOffsetBytes[4];
+	newOffsetBytes[0] = (newOffset >> 24) & 0xFF;
+	newOffsetBytes[1] = (newOffset >> 16) & 0xFF;
+	newOffsetBytes[2] = (newOffset >> 8) & 0xFF;
+	newOffsetBytes[3] = newOffset & 0xFF;
+	app1.ifd0.setFieldValue(exifIFDTag, newOffsetBytes);
+	
+	
+	
+	
+	
+	
+	
+	// TODO remove print IFD0
+	cout << endl << "ifd0" << endl;
+	ifd = app1.ifd0.get();
+	// Convert to byte array for writing
+	copy(ifd.begin(), ifd.end(), ifdBytes);
+	printBytes(ifdBytes, ifd.size());
+	cout << endl << endl;
+	
+	
+	
+	
+	
+	
+	
+	// TODO Add constructor with info?
+	app1.exifIFD.addField(ApertureIFDField());
+	app1.exifIFD.addField(ShutterSpeedIFDField());
+	
+	
+	
+	
 	cout << app1.app1Header->getLength() << endl;
-	
-	
-	
-	
-	
 	
 	
 	// TODO Calculate offsets for data area in EXIF IFD, and EXIF OFFSET in IFD0, then update offsets
@@ -510,7 +617,7 @@ int main(){
 	copy(app.begin(), app.end(), appBytes);
 	
 	
-	printBytes(appBytes, app.size());	// TODO remove
+	prettyPrintAPP1(appBytes, app.size());	// TODO remove
 	
 	/*
 	// Get filesize in bytes
