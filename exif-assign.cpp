@@ -568,14 +568,10 @@ class APP1{
 
 
 int main(){
-	cout << hex;	// Print in hex
-	unsigned char intBuffer[4];
+	cout << hex;				// Print in hex
+	unsigned char intBuffer[4];	// Buffer for int conversions
 	
 	
-	
-	// Open JPG as binary file
-	ifstream jpg("./img/img016.jpg", ios::binary | ios::ate);
-	ofstream jpgExif("./img/img016exif.jpg", ios::binary | ios::trunc);
 	
 	APP1 app1;
 	
@@ -607,41 +603,46 @@ int main(){
 	unsigned char appBytes[app.size()];
 	copy(app.begin(), app.end(), appBytes);
 	
-	prettyPrintAPP1(appBytes, app.size());	// TODO remove
+	//prettyPrintAPP1(appBytes, app.size());	// TODO remove
 	
-	/*
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	// Open JPG as binary file
+	ifstream jpg("./img/img016.jpg", ios::binary | ios::ate);
+	ofstream jpgExif("./img/img016exif.jpg", ios::binary | ios::trunc);
+	
+	
 	// Get filesize in bytes
 	int filesize = jpg.tellg();
-	jpg.seekg(0, ios::beg);	// Reset for reading
+	jpg.seekg(0, ios::beg);		// Reset for reading
+	
 	
 	// Read file in 2-byte chunks
-	unsigned char buf[2];	// 2 byte buffer
-	for(int i = 0; i < 10; i++){
+	unsigned char buf[2];		// 2 byte buffer
+	for(int i = 0; i < 10; i++){		// TODO hardcoded, need to look for end of APP0
 		jpg.read((char*)&buf, 2);
-		cout << (int)buf[0] << (int)buf[1] << endl;
 		jpgExif.write((char*)buf, 2);
 	}
 	
-	// Insert after APP0
-	// APP1 IFD for f/2 and 1/125
-	unsigned char exif[60] = {	0xFF, 0xE1, 0x00, 0x38, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00, 0x49, 0x49, 0x2a, 0x00,
-								0x08, 0x00, 0x00, 0x00, 0x00, 0x00,0x9D, 0x82, 0x05, 0x00, 0x01, 0x00, 0x00, 0x00, 0x28, 0x00,
-								0x00, 0x00,	0x9A, 0x82, 0x05, 0x00, 0x01, 0x00, 0x00, 0x00, 0x30, 0x00,	0x00, 0x00,
-								0xC8, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x20, 0x03,
-								0x00, 0x00	};
-	
-	jpgExif.write((char*)exif, 60);
+	// Write APP1
+	jpgExif.write((char*)&appBytes, app1.getSize());
 	
 	
-	
-	
+	// Write rest of the file
 	for(int i = 10; i < filesize; i++){
 		jpg.read((char*)&buf, 2);
-		//cout << (int)buf[0] << (int)buf[1] << endl;
 		jpgExif.write((char*)buf, 2);
 	}
 	
-	*/
+	
 
 	// Psuedocode for Exif cleanup and insertion
 	/*
