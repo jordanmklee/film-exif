@@ -504,16 +504,29 @@ class TIFFHeader{
 };
 
 class APP1{
-	public:
+	private:
 		APP1Header* app1Header;
 		TIFFHeader* tiffHeader;
 		IFD ifd0;
 		IFD exifIFD;
 		
-		// Creates a new APP1 object with headers and IFDs
+	public:
+		// Creates a new APP1 object with the following:
+		// APP1 header
+		// TIFF header set to big-endian
+		// IFD0 (with EXIF Offset field, pointing to EXIF IFD)
+		// EXIF IFD (with no fields)
 		APP1(){
 			app1Header = new APP1Header();
 			tiffHeader = new TIFFHeader(1);	// 1 for big-endian
+			
+			// Add EXIF Offset field to IFD0, and set the value
+			ifd0.addField(ExifIFDField());
+			
+			unsigned char intBuffer[4];	// Buffer for int conversion
+			int exifOffset = tiffHeader->getSize() + ifd0.getSize();
+			intToByteArray(exifOffset, intBuffer);
+			ifd0.setFieldValue(exifIFDTag, intBuffer);
 		}
 		
 		// Returns entire APP1 segment as a vector of bytes
@@ -564,37 +577,36 @@ class APP1{
 			// +12 to account for the new field being added
 			return getSize() - app1Header->getSize() + 12;
 		}
+		
+		// Adds EXIF metadata to APP1 segment
+		// tagID - EXIF tag ID of the kind of metadata
+		// value - EXIF data defined by film-exif (see documentation)
+		void addMetadata(unsigned char tagID[], int value){
+			// Get offset to next available data area as byte array
+			unsigned char intBuffer[4];
+			intToByteArray(getNextDataOffset(), intBuffer);
+			
+			// Add field to EXIF IFD corresponding to tagID, with arg value
+			if(	tagID[0] == apertureIFDTag[0] &&
+				tagID[1] == apertureIFDTag[1])
+				exifIFD.addField(ApertureIFDField(value));
+			else if(tagID[0] == shutterSpeedIFDTag[0] &&
+					tagID[1] == shutterSpeedIFDTag[1])
+				exifIFD.addField(ShutterSpeedIFDField(value));
+			
+			// Set offset to point to correct data
+			exifIFD.setFieldValue(tagID, intBuffer);
+		}
 };
 
 
 int main(){
-	cout << hex;				// Print in hex
-	unsigned char intBuffer[4];	// Buffer for int conversions
+	cout << hex;	// Print in hex
 	
-	
-	
+	// Create APP1 segment with metadata
 	APP1 app1;
-	
-	// Add EXIF Offset field to IFD0, and set the value
-	app1.ifd0.addField(ExifIFDField());
-	
-	int exifOffset = app1.tiffHeader->getSize() + app1.ifd0.getSize();
-	intToByteArray(exifOffset, intBuffer);
-	app1.ifd0.setFieldValue(exifIFDTag, intBuffer);
-	
-	
-	// Add aperture field and set value (ie. offset to data)
-	intToByteArray(app1.getNextDataOffset(), intBuffer);
-	app1.exifIFD.addField(ApertureIFDField(14));
-	app1.exifIFD.setFieldValue(apertureIFDTag, intBuffer);
-	
-	
-	// Add shutter speed field and set value (ie. offset to data)
-	intToByteArray(app1.getNextDataOffset(), intBuffer);
-	app1.exifIFD.addField(ShutterSpeedIFDField(125));
-	app1.exifIFD.setFieldValue(shutterSpeedIFDTag, intBuffer);
-	
-	
+	app1.addMetadata(apertureIFDTag, 14);
+	app1.addMetadata(shutterSpeedIFDTag, 125);
 	
 	// Export APP1
 	vector<unsigned char> app = app1.getApp1();
@@ -602,10 +614,6 @@ int main(){
 	// Convert to byte array for writing
 	unsigned char appBytes[app.size()];
 	copy(app.begin(), app.end(), appBytes);
-	
-	//prettyPrintAPP1(appBytes, app.size());	// TODO remove
-	
-	
 	
 	
 	
@@ -616,54 +624,45 @@ int main(){
 	
 	
 	// Open JPG as binary file
-	ifstream jpg("./img/img016.jpg", ios::binary | ios::ate);
-	ofstream jpgExif("./img/img016exif.jpg", ios::binary | ios::trunc);
+	ifstream jpg("./img/steak.jpg", ios::binary | ios::ate);
+	ofstream jpgExif("./img/steakExif.jpg", ios::binary | ios::trunc);
 	
 	
 	// Get filesize in bytes
 	int filesize = jpg.tellg();
 	jpg.seekg(0, ios::beg);		// Reset for reading
 	
+	unsigned char buf[2];
 	
-	// Read file in 2-byte chunks
-	unsigned char buf[2];		// 2 byte buffer
-	for(int i = 0; i < 10; i++){		// TODO hardcoded, need to look for end of APP0
-		jpg.read((char*)&buf, 2);
-		jpgExif.write((char*)buf, 2);
-	}
+	// Read SOI (0xFFD8) from input JPG and write to output JPG
+	jpg.read((char*)&buf, 2);
+	jpgExif.write((char*)buf, 2);
 	
-	// Write APP1
+	// Write generated APP1 to output JPG
 	jpgExif.write((char*)&appBytes, app1.getSize());
 	
-	
-	// Write rest of the file
-	for(int i = 10; i < filesize; i++){
+	// Read input JPG in 2-byte chunks
+	for(int i = 1; i < filesize; i+=2){	// Incremented by 2 since input JPG is read in 2-byte increments
 		jpg.read((char*)&buf, 2);
-		jpgExif.write((char*)buf, 2);
+		
+		// Look for an APPn marker; denoting the beginning of an APPn segment
+		if(buf[0] == 0xFF && (buf[1] & 0xE0) == 0xE0){
+			jpg.read((char*)&buf, 2);	// Read length of APPn segment
+			
+			// Read through the APPn segment and omit writing segment to output JPG
+			unsigned short segLength = (buf[0] << 8) | buf[1];	// Convert length byte array to unsigned short
+			for(int x = 0; x < (segLength - 2); x++)	// segLength is subtracted by 2 to remove the 2 bytes denoting length (was already read)
+				jpg.read((char*)&buf, 1);
+		}
+		// No APPn marker; write to file
+		else{
+			jpgExif.write((char*)buf, 2);
+		}
 	}
 	
-	
-
-	// Psuedocode for Exif cleanup and insertion
-	/*
-	begin
-		while(in APPn zone){
-			check APPn segment type
-			get segment length
-			skip forward length
-			if(APP1)
-				delete
-			else
-				keep
-		}
-		insert custom APP1
-		write rest of data
-	end
-	*/
-	
-	
-	
+	// Close file streams
 	jpg.close();
 	jpgExif.close();
+	
 	return 0;
 }
