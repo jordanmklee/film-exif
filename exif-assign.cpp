@@ -529,28 +529,28 @@ class APP1{
 			ifd0.setFieldValue(exifIFDTag, intBuffer);
 		}
 		
-		// Returns entire APP1 segment as a vector of bytes
-		vector<unsigned char> getApp1(){
+		// Returns entire APP1 segment as byte array
+		void get(unsigned char bytes[]){
 			updateSegSize();
-			vector<unsigned char> app1Bytes;
+			vector<unsigned char> app1Vector;
 			
 			// Add APP1 header
 			vector<unsigned char> app1HeaderBytes = app1Header->get();
-			app1Bytes.insert(end(app1Bytes), begin(app1HeaderBytes), end(app1HeaderBytes));
+			app1Vector.insert(end(app1Vector), begin(app1HeaderBytes), end(app1HeaderBytes));
 			
 			// Add TIFF header
 			vector<unsigned char> tiffHeaderBytes = tiffHeader->get();
-			app1Bytes.insert(end(app1Bytes), begin(tiffHeaderBytes), end(tiffHeaderBytes));
+			app1Vector.insert(end(app1Vector), begin(tiffHeaderBytes), end(tiffHeaderBytes));
 			
 			// Add 0IFD
 			vector<unsigned char> ifd0Bytes = ifd0.get();
-			app1Bytes.insert(end(app1Bytes), begin(ifd0Bytes), end(ifd0Bytes));
+			app1Vector.insert(end(app1Vector), begin(ifd0Bytes), end(ifd0Bytes));
 			
 			// Add EXIF IFD
 			vector<unsigned char> exifBytes = exifIFD.get();
-			app1Bytes.insert(end(app1Bytes), begin(exifBytes), end(exifBytes));
+			app1Vector.insert(end(app1Vector), begin(exifBytes), end(exifBytes));
 			
-			return app1Bytes;
+			copy(app1Vector.begin(), app1Vector.end(), bytes);
 		}
 		
 		// Updates bytes in APP1 header to reflect current size
@@ -604,8 +604,8 @@ int main(){
 	cout << hex;	// Print in hex
 	
 	// Open JPG as binary file
-	ifstream jpg("./img/steak.jpg", ios::binary | ios::ate);
-	ofstream jpgExif("./img/steakExif.jpg", ios::binary | ios::trunc);
+	ifstream jpg("./img/img016.jpg", ios::binary | ios::ate);
+	ofstream jpgExif("./img/img016Exif.jpg", ios::binary | ios::trunc);
 	
 	
 	// Get filesize in bytes
@@ -628,12 +628,8 @@ int main(){
 	app1.addMetadata(shutterSpeedIFDTag, 125);
 	
 	// Export APP1
-	vector<unsigned char> app = app1.getApp1();
-	
-	// Convert to byte array for writing
-	unsigned char appBytes[app.size()];
-	copy(app.begin(), app.end(), appBytes);
-	
+	unsigned char appBytes[app1.getSize()];
+	app1.get(appBytes);
 	
 	
 	
