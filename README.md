@@ -105,6 +105,8 @@ A list of EXIF and TIFF tags can be found at https://exiftool.org/TagNames/EXIF.
 
 In our case, IFD0 only contains one entry in the directory: the EXIF IFD Offset. EXIF IFD lists each metadata metric that we are interested in. As an example, aperture and shutter speed are recorded as Type 5, and in the data area the 2 `uint32`'s are divided to produce the result. The XML file data is converted and populates these fields. Since the recording part of `film-exif` records a small number of metrics (compared to a digital camera), our generated APP1 segment is relatively short.
 
+In implementation, IFD field values are set from the IFD object, since they require IFD context to be accurate. For fields with data greater than 4 bytes, the next available offset in the data area must be calculated before the field is added.
+
 ## Assumptions
 
 - `film-exif` can only parse JPEG files.
