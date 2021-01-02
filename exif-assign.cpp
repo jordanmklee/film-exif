@@ -332,8 +332,9 @@ class IFD{
 	public:
 		// Constructor
 		IFD(){
+			// Set offset to next IFD to default (const 0x0000 0000)
 			numFields = 0x0000;
-			memcpy(offsetNextIFD, ifdOffset, 4);	// Set offset to next IFD to default (const 0x0000 0000)
+			memcpy(offsetNextIFD, ifdOffset, 4);
 		}
 		
 		// Returns entire IFD as a vector of bytes
@@ -567,7 +568,8 @@ class APP1{
 			app1Header->setSize(getSize() - 2);	// Subtract the APP1 marker (0xFFE1)
 		}
 		
-		// Get size of entire APP1 (APP1 headers, IFD0, EXIF IFD) in bytes (including APP1 marker)
+		// Get size of entire APP1 (APP1 headers, IFD0, EXIF IFD) in 
+		// bytes (including APP1 marker)
 		unsigned short getSize(){
 			unsigned short size = 0x0000;
 			
@@ -647,18 +649,18 @@ int main(){
 	// Write generated APP1 to output JPG
 	jpgExif.write((char*)&appBytes, app1.getSize());
 	
-	// Read input JPG in 2-byte chunks and writes it to output JPG,
-	// omitting any APPn segments
+	// Read input JPG in 2-byte chunks and writes it to output JPG, omitting any APPn segments
 	for(int i = 1; i < filesize; i+=2){	// Incremented by 2 since input JPG is read in 2-byte increments
 		jpg.read((char*)&buf, 2);
 		
 		// Look for an APPn marker; denoting the beginning of an APPn segment
-		if(buf[0] == 0xFF && (buf[1] & 0xE0) == 0xE0){
+		if(buf[0] == 0xFF && (buf[1] & 0xF0) == 0xE0){
 			jpg.read((char*)&buf, 2);	// Read length of APPn segment
 			
 			// Read through the APPn segment and omit writing segment to output JPG
-			unsigned short segLength = byteToUShort(buf);	// Convert length byte array to unsigned short
-			for(int x = 0; x < (segLength - 2); x++)	// segLength is subtracted by 2 to remove the 2 bytes denoting length (was already read)
+			// segLength is subtracted by 2 to remove the 2 bytes denoting length (was already read)
+			unsigned short segLength = byteToUShort(buf);
+			for(int x = 0; x < (segLength - 2); x++)
 				jpg.read((char*)&buf, 1);
 		}
 		// No APPn marker; write to file
