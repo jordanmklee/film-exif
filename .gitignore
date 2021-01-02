@@ -1,7 +1,5 @@
 .DS_Store
-img/
-assignment
-compile.sh
-xml-gen
-exif-assign
 .vscode/
+img/
+exif-assign/assignment
+exif-assign/exif-assign
