@@ -10,8 +10,8 @@
 using namespace std;
 
 struct XmlFrame{
-	double aperture;
-	double shutterSpeed;
+	int aperture;
+	int shutterSpeed;
 };
 
 // Removes the leading whitespace before a line in XML file
@@ -68,8 +68,10 @@ vector<XmlFrame> parseXml(string filepath){
 		}
 		xml.close();
 	}
-	else
-		cout << "Error: file does not exist!" << endl;
+	else{
+		perror("Could not open XML file");
+		exit(0);
+	}
 	
 	return roll;
 }
@@ -147,7 +149,8 @@ vector<string> getFilenames(const char* path){
 		}
 	}
 	else{
-		perror("");	// Error, directory could not be opened
+		perror("Could not open image directory");	// Error, directory could not be opened
+		exit(0);
 	}
 	
 	closedir(dir);
@@ -155,51 +158,62 @@ vector<string> getFilenames(const char* path){
 }
 
 int main(int argc, char* argv[]){
-	// TODO flags for verbose assignment?
-	
-	// TODO arg handling; check for valid xml file and filepath
-	if(argc <= 2){
-		cout << "Usage: " << argv[0] << " <xml> <filepath>" << endl;
-		return 0;
-	}
 	
 	// Parse arguments
+	if(argc != 4){
+		cout << "Usage: " << argv[0] << " <xml-filepath> <images-directory> <output-directory>" << endl;
+		return 0;
+	}
 	string imgPath = argv[2];
+	string outPath = argv[3];
+	
+	// Verify that file or directory exists; quits program if cannot be opened
 	vector<XmlFrame> roll = parseXml(argv[1]);
 	vector<string> filenames = getFilenames(imgPath.c_str());
+	getFilenames(outPath.c_str());
+	
 	
 	// Check if number of XML entries match the number of files to be assigned metadata
 	if(roll.size() != filenames.size()){
-		cout << "[WARNING] Length mismatch (is this the correct XML file?)"
-				<< endl << "Continue anyway?" << endl;
-		int resp;
-		cin >> resp;
-		if(resp == 1){
-			cout << "Quitting..." << endl;
+		printf("There are %lu recorded exposures but there are %lu image files.\n", roll.size(), filenames.size());
+		
+		if(roll.size() > filenames.size()){
+			int leftover = roll.size() - filenames.size();
+			printf("%d recorded exposures will not be assigned to files.\n", leftover);
+		}
+		else{
+			int missing = filenames.size() - roll.size();
+			printf("%d image files will not be assigned metadata.\n", missing);
+		}
+		printf("Continue anyways? (y/n)\n");
+		
+		char forceContinue;
+		cin >> forceContinue;
+		if(forceContinue != 'y'){
+			printf("Quitting...\n\n");
 			return 0;
 		}
 	}
 	
 	// Assign metadata to files
-	for(int i = 0; i < roll.size(); i++){
+	for(int i = 0; i < filenames.size(); i++){
 		string filename = filenames.at(i);
-		string name = filename.substr(0, filename.find("."));
-		string extension = filename.substr(filename.find("."), filename.length());
+		string inFilepath = imgPath + "/" + filename;
+		string outFilepath = outPath + "/" + filename;
 		
-		string inFilepath = imgPath + '/' + filename;
-		string outFilepath = imgPath + '/' + name + "Exif" + extension;	// Append "Exif" to filename to differentiate
-		/* 	TODO
-			Should it even append? getFilenames(dir) returns previously assigned files
-			Maybe put output into different directory?
-		*/
+		if(i > roll.size())	// No more recorded exposures, quit
+			break;
 		
 		// Status messages
-		// TODO clean this up
-		printf("Assigning Exif (%d of %lu)\n", (i+1), roll.size());
-		printf("\t%s --> %s\n", inFilepath.c_str(), outFilepath.c_str());
-		printf("\tAperture:\t%f\n\tShutter Speed:\t%f\n", roll.at(i).aperture, roll.at(i).shutterSpeed);
+		printf("\nAssigning Exif (%d of %lu)\n", (i+1), filenames.size());
+		printf("\tInput:\t\t%s\n", inFilepath.c_str());
+		printf("\tOutput:\t\t%s\n\n", outFilepath.c_str());
+		printf("\tAperture:\t%f\n", (roll.at(i).aperture / 10.0));
+		printf("\tShutter Speed:\t%f\n\n", (roll.at(i).shutterSpeed / 1000.0));
 		
-		writeMetadata(inFilepath, outFilepath, roll.at(i));
+		// Write to output file
+			writeMetadata(inFilepath, outFilepath, roll.at(i));
+		
 	}
 
 	return 0;

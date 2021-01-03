@@ -307,7 +307,7 @@ class ShutterSpeedIFDField : public IFDFieldWithData{
 					break;
 				case 500:
 					shutterSpeedNumerator[2] = 0x01;
-					shutterSpeedNumerator[3] = 0xFA;
+					shutterSpeedNumerator[3] = 0xF4;
 					break;
 				case 1000:
 					shutterSpeedNumerator[2] = 0x03;
