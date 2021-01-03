@@ -265,53 +265,57 @@ class ShutterSpeedIFDField : public IFDFieldWithData{
 		
 		// Shutter speed is stored in XML as integer = (time in seconds) * 1000
 		// eg. 1/8 is stored as (0.125 * 1000) = 125
-		// Shutter speed is stored in IFD data area as numerator/denominator = (XML-value) / 1000
+		// Shutter speed is stored in IFD data area as numerator/denominator = 10 / (XML-value)
 		void setShutterSpeedData(int shutterSpeed){
-			// Denominator is always 1000
-			unsigned char denom[4] = {0x00, 0x00, 0x03, 0x0E8};
-			memcpy(shutterSpeedDenominator, denom, 4);
+			// Numerator is always 10
+			unsigned char numer[4] = {0x00, 0x00, 0x00, 0x0A};
+			memcpy(shutterSpeedNumerator, numer, 4);
 			
-			// Numerator is (s) * 1000
-			shutterSpeedNumerator[0] = 0x00;
-			shutterSpeedNumerator[1] = 0x00;
-			shutterSpeedNumerator[2] = 0x00;
+			// Convert XML shutter speed from int to hex
+			shutterSpeedDenominator[0] = 0x00;
+			shutterSpeedDenominator[1] = 0x00;
+			shutterSpeedDenominator[2] = 0x00;
 			
 			// Standard shutter speeds from 1/1000s to 1s are recognized
 			switch(shutterSpeed){
-				case 1:
-					shutterSpeedNumerator[3] = 0x01;
+				case 10000:
+					shutterSpeedDenominator[2] = 0x27;
+					shutterSpeedDenominator[3] = 0x10;
 					break;
-				case 2:
-					shutterSpeedNumerator[3] = 0x02;
+				case 5000:
+					shutterSpeedDenominator[2] = 0x13;
+					shutterSpeedDenominator[3] = 0x88;
 					break;
-				case 4:
-					shutterSpeedNumerator[3] = 0x04;
+				case 2500:
+					shutterSpeedDenominator[2] = 0x09;
+					shutterSpeedDenominator[3] = 0xC4;
 					break;
-				case 8:
-					shutterSpeedNumerator[3] = 0x08;
+				case 1250:
+					shutterSpeedDenominator[2] = 0x04;
+					shutterSpeedDenominator[3] = 0xE2;
 					break;
-				case 16:
-					shutterSpeedNumerator[3] = 0x10;
+				case 600:
+					shutterSpeedDenominator[2] = 0x02;
+					shutterSpeedDenominator[3] = 0x58;
 					break;
-				case 30:
-					shutterSpeedNumerator[3] = 0x1E;
+				case 300:
+					shutterSpeedDenominator[2] = 0x01;
+					shutterSpeedDenominator[3] = 0x2C;
 					break;
-				case 60:
-					shutterSpeedNumerator[3] = 0x3C;
+				case 150:
+					shutterSpeedDenominator[3] = 0x96;
 					break;
-				case 125:
-					shutterSpeedNumerator[3] = 0x7D;
+				case 80:
+					shutterSpeedDenominator[3] = 0x50;
 					break;
-				case 250:
-					shutterSpeedNumerator[3] = 0xFA;
+				case 40:
+					shutterSpeedDenominator[3] = 0x28;
 					break;
-				case 500:
-					shutterSpeedNumerator[2] = 0x01;
-					shutterSpeedNumerator[3] = 0xF4;
+				case 20:
+					shutterSpeedDenominator[3] = 0x14;
 					break;
-				case 1000:
-					shutterSpeedNumerator[2] = 0x03;
-					shutterSpeedNumerator[3] = 0xE8;
+				case 10:
+					shutterSpeedDenominator[3] = 0x0A;
 					break;
 			}
 			

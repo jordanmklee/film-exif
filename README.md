@@ -28,21 +28,21 @@ Aperture is referred to by f-numbers, represented by a `double`. The standard fu
 |   16   |           160           |
 |   22   |           220           |
 
-Shutter speed is referred to by (fractions of) seconds, and are represented by a `double`. Common shutter speeds and the equivalent `double` are listed here for convenience (XML stores the shutter speed `double` multiplied by a factor of `1000`):
+Shutter speed is referred to by (fractions of) seconds, and are represented by a `double`. Common shutter speeds are listed here for convenience (XML stores the information as simply the denominator of the fraction, multiplied by a factor of 10):
 
-| Shutter Speed | double | XML Value (Shutter Speed * 1000) |
-| :-----------: | :----: | :------------------------------: |
-|    1/1000     | 0.001  |                1                 |
-|     1/500     | 0.002  |                2                 |
-|     1/250     | 0.004  |                4                 |
-|     1/125     | 0.008  |                8                 |
-|     1/60      | 0.016  |                16                |
-|     1/30      |  0.03  |                30                |
-|     1/15      |  0.06  |                60                |
-|      1/8      | 0.125  |               125                |
-|      1/4      |  0.25  |               250                |
-|      1/2      |  0.5   |               500                |
-|       1       |   1    |               1000               |
+| Shutter Speed | XML Value (denominator * 10) |
+| :-----------: | :--------------------------: |
+|    1/1000     |            10000             |
+|     1/500     |             5000             |
+|     1/250     |             2500             |
+|     1/125     |             1250             |
+|     1/60      |             600              |
+|     1/30      |             300              |
+|     1/15      |             150              |
+|      1/8      |              80              |
+|      1/4      |              40              |
+|      1/2      |              20              |
+|       1       |              10              |
 
 
 

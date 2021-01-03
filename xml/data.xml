@@ -5,91 +5,91 @@
 	<exp>
 		<frameNumber>0</frameNumber>
 		<aperture>14</aperture>
-		<shutterSpeed>1000</shutterSpeed>
+		<shutterSpeed>10</shutterSpeed>
 	</exp>
 	
 	<exp>
 		<frameNumber>1</frameNumber>
 		<aperture>20</aperture>
-		<shutterSpeed>500</shutterSpeed>
+		<shutterSpeed>20</shutterSpeed>
 	</exp>
 	
 	<exp>
 		<frameNumber>2</frameNumber>
 		<aperture>24</aperture>
-		<shutterSpeed>250</shutterSpeed>
+		<shutterSpeed>40</shutterSpeed>
 	</exp>
 	
 	<exp>
 		<frameNumber>3</frameNumber>
 		<aperture>28</aperture>
-		<shutterSpeed>125</shutterSpeed>
+		<shutterSpeed>80</shutterSpeed>
 	</exp>
 	
 	<exp>
 		<frameNumber>4</frameNumber>
 		<aperture>33</aperture>
-		<shutterSpeed>60</shutterSpeed>
+		<shutterSpeed>150</shutterSpeed>
 	</exp>
 	
 	<exp>
 		<frameNumber>5</frameNumber>
 		<aperture>40</aperture>
-		<shutterSpeed>30</shutterSpeed>
+		<shutterSpeed>300</shutterSpeed>
 	</exp>
 	
 	<exp>
 		<frameNumber>6</frameNumber>
 		<aperture>56</aperture>
-		<shutterSpeed>16</shutterSpeed>
+		<shutterSpeed>600</shutterSpeed>
 	</exp>
 	
 	<exp>
 		<frameNumber>7</frameNumber>
 		<aperture>67</aperture>
-		<shutterSpeed>8</shutterSpeed>
+		<shutterSpeed>1250</shutterSpeed>
 	</exp>
 	
 	<exp>
 		<frameNumber>8</frameNumber>
 		<aperture>80</aperture>
-		<shutterSpeed>4</shutterSpeed>
+		<shutterSpeed>2500</shutterSpeed>
 	</exp>
 	
 	<exp>
 		<frameNumber>9</frameNumber>
 		<aperture>95</aperture>
-		<shutterSpeed>2</shutterSpeed>
+		<shutterSpeed>5000</shutterSpeed>
 	</exp>
 	
 	<exp>
 		<frameNumber>10</frameNumber>
 		<aperture>110</aperture>
-		<shutterSpeed>1</shutterSpeed>
+		<shutterSpeed>10000</shutterSpeed>
 	</exp>
 	
 	<exp>
 		<frameNumber>11</frameNumber>
 		<aperture>130</aperture>
-		<shutterSpeed>1</shutterSpeed>
+		<shutterSpeed>10000</shutterSpeed>
 	</exp>
 	
 	<exp>
 		<frameNumber>12</frameNumber>
 		<aperture>160</aperture>
-		<shutterSpeed>1</shutterSpeed>
+		<shutterSpeed>10000</shutterSpeed>
 	</exp>
 	
 	<exp>
 		<frameNumber>13</frameNumber>
 		<aperture>190</aperture>
-		<shutterSpeed>1</shutterSpeed>
+		<shutterSpeed>10000</shutterSpeed>
 	</exp>
 	
 	<exp>
 		<frameNumber>14</frameNumber>
 		<aperture>220</aperture>
-		<shutterSpeed>1</shutterSpeed>
+		<shutterSpeed>10000</shutterSpeed>
 	</exp>
 	
 </roll>

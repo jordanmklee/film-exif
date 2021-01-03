@@ -208,8 +208,8 @@ int main(int argc, char* argv[]){
 		printf("\nAssigning Exif (%d of %lu)\n", (i+1), filenames.size());
 		printf("\tInput:\t\t%s\n", inFilepath.c_str());
 		printf("\tOutput:\t\t%s\n\n", outFilepath.c_str());
-		printf("\tAperture:\t%f\n", (roll.at(i).aperture / 10.0));
-		printf("\tShutter Speed:\t%f\n\n", (roll.at(i).shutterSpeed / 1000.0));
+		printf("\tAperture:\tf/%.1f\n", (roll.at(i).aperture / 10.0));
+		printf("\tShutter Speed:\t1/%ds\n\n", (roll.at(i).shutterSpeed / 10));
 		
 		// Write to output file
 			writeMetadata(inFilepath, outFilepath, roll.at(i));
