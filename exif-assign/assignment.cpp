@@ -133,7 +133,6 @@ void writeMetadata(string inFilepath, string outFilepath, XmlFrame metadata){
 }
 
 // Returns a vector of filenames from a directory path
-// TODO make sure vector is ordered correctly
 vector<string> getFilenames(const char* path){
 	vector<string> filenames;
 	
@@ -142,11 +141,14 @@ vector<string> getFilenames(const char* path){
 	if((dir = opendir(path)) != NULL){
 		while((diread = readdir(dir)) != NULL){
 			string filename = diread->d_name;
-			
 			// Adds filename to vector if it is a JPG file
 			if(regex_match(filename, regex("[a-zA-Z0-9]+\\.(jpe?g|JPE?G)") ))
 				filenames.push_back(filename);
 		}
+		
+		// Sort vector in ascending order, since exposure image files are assumed to be
+		// stored in sequential order
+		sort(filenames.begin(), filenames.end());
 	}
 	else{
 		perror("Could not open image directory");	// Error, directory could not be opened
@@ -212,8 +214,7 @@ int main(int argc, char* argv[]){
 		printf("\tShutter Speed:\t1/%ds\n\n", (roll.at(i).shutterSpeed / 10));
 		
 		// Write to output file
-			writeMetadata(inFilepath, outFilepath, roll.at(i));
-		
+		writeMetadata(inFilepath, outFilepath, roll.at(i));
 	}
 
 	return 0;
