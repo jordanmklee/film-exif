@@ -76,22 +76,32 @@ vector<XmlFrame> parseXml(string filepath){
 	return roll;
 }
 
-// Deletes existing metadata from input JPG and produces an output JPG with
-// metadata generated from XmlFrame
-// Filepaths are assumed to be correct (checked in main() function)
+// Creates a JPG from input JPG image data, and metadata generated from XmlFrame
+// Filepaths are assumed to be correct (checked in calling function)
 void writeMetadata(string inFilepath, string outFilepath, XmlFrame metadata){
-	// Open JPGs as binary file
-	ifstream jpg(inFilepath, ios::binary | ios::ate);
-	ofstream jpgExif(outFilepath, ios::binary | ios::trunc);
+	// Open file streams
+	ifstream jpg(inFilepath, ios::binary);
+	fstream temp("./temp.jpg", ios::binary | ios::trunc | ios::in | ios::out);
+	
+	// Two-phase commit; copy input JPG to a temporary file
+	temp << jpg.rdbuf();
+	jpg.close();
+	
+	// Delete original JPG file if overwriting
+	if(inFilepath == outFilepath){
+		if(remove(inFilepath.c_str()) != 0)
+			perror("Error deleting file!\n");
+	}
 	
 	// Get input JPG filesize in bytes
-	int filesize = jpg.tellg();
-	jpg.seekg(0, ios::beg);		// Reset for reading
+	int filesize = temp.tellg();
+	temp.seekg(0, ios::beg);		// Reset for reading
 	
 	unsigned char buf[2];
 	
+	ofstream jpgExif(outFilepath, ios::binary | ios::trunc);
 	// Read SOI (0xFFD8) from input JPG and write to output JPG
-	jpg.read((char*)&buf, 2);
+	temp.read((char*)&buf, 2);
 	jpgExif.write((char*)buf, 2);
 	
 	
@@ -109,17 +119,17 @@ void writeMetadata(string inFilepath, string outFilepath, XmlFrame metadata){
 	
 	// Read input JPG in 2-byte chunks and writes it to output JPG, omitting any APPn segments
 	for(int i = 1; i < filesize; i+=2){	// Incremented by 2 since input JPG is read in 2-byte increments
-		jpg.read((char*)&buf, 2);
+		temp.read((char*)&buf, 2);
 		
 		// Look for an APPn marker; denoting the beginning of an APPn segment
 		if(buf[0] == 0xFF && (buf[1] & 0xF0) == 0xE0){
-			jpg.read((char*)&buf, 2);	// Read length of APPn segment
+			temp.read((char*)&buf, 2);	// Read length of APPn segment
 			
-			// Read through the APPn segment and omit writing segment to output JPG
+			// Skip through the APPn segment and omit writing segment to output JPG
 			// segLength is subtracted by 2 to remove the 2 bytes denoting length (was already read)
 			unsigned short segLength = byteToUShort(buf);
 			for(int x = 0; x < (segLength - 2); x++)
-				jpg.read((char*)&buf, 1);
+				temp.read((char*)&buf, 1);
 		}
 		// No APPn marker; write to file
 		else{
@@ -128,7 +138,8 @@ void writeMetadata(string inFilepath, string outFilepath, XmlFrame metadata){
 	}
 	
 	// Close file streams
-	jpg.close();
+	temp.close();
+	remove("./temp.jpg");
 	jpgExif.close();
 }
 
@@ -163,11 +174,16 @@ int main(int argc, char* argv[]){
 	
 	// Parse arguments
 	if(argc != 4){
-		cout << "Usage: " << argv[0] << " <xml-filepath> <images-directory> <output-directory>" << endl;
+		printf("Usage: <xml-filepath> <images-directory> <output-directory>\n", argv[0]);
 		return 0;
 	}
 	string imgPath = argv[2];
 	string outPath = argv[3];
+	// Handle overwrite flag; set output directory the same as input directory
+	if(outPath == "-o"){
+		outPath = imgPath;
+		printf("[WARNING] Overwriting");
+	}
 	
 	// Verify that file or directory exists; quits program if cannot be opened
 	vector<XmlFrame> roll = parseXml(argv[1]);
@@ -207,7 +223,7 @@ int main(int argc, char* argv[]){
 			break;
 		
 		// Status messages
-		printf("\nAssigning Exif (%d of %lu)\n", (i+1), filenames.size());
+		printf("\nAssigning Exif metadata (%d of %lu)\n", (i+1), filenames.size());
 		printf("\tInput:\t\t%s\n", inFilepath.c_str());
 		printf("\tOutput:\t\t%s\n\n", outFilepath.c_str());
 		printf("\tAperture:\tf/%.1f\n", (roll.at(i).aperture / 10.0));
